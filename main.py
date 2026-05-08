@@ -1,8 +1,10 @@
 import os
 import sys
+import math
+import time
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -19,8 +21,8 @@ except ImportError as e:
 
 app = FastAPI(
     title="Construction AI API",
-    description="AI for construction delay prediction and risk assessment",
-    version="2.0.0",
+    description="AI for construction delay prediction, risk assessment, and equipment tracking simulation",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -85,7 +87,7 @@ def home():
     return {
         "message": "Construction AI API is running!",
         "ai_status": "loaded" if (ai_model and ai_model.is_trained) else "not_loaded",
-        "version": "2.0.0",
+        "version": "2.1.0",
     }
 
 
@@ -129,24 +131,16 @@ def predict_delay_risk(data: AIPredictionInput):
     recommendations = []
 
     if data.temperature > 45:
-        recommendations.append(
-            "High temperature detected: delay concrete work or switch to night shifts."
-        )
+        recommendations.append("High temperature detected: delay concrete work or switch to night shifts.")
 
     if data.rainfall == 1:
-        recommendations.append(
-            "Rain detected: stop outdoor construction activities."
-        )
+        recommendations.append("Rain detected: stop outdoor construction activities.")
 
     if data.equipment_breakdown == 1:
-        recommendations.append(
-            "Equipment breakdown detected: immediate maintenance required."
-        )
+        recommendations.append("Equipment breakdown detected: immediate maintenance required.")
 
     if data.equipment_availability < 0.7:
-        recommendations.append(
-            "Low equipment availability: review equipment allocation."
-        )
+        recommendations.append("Low equipment availability: review equipment allocation.")
 
     worker_shortage_pct = (
         (data.planned_workers - data.actual_workers)
@@ -160,18 +154,12 @@ def predict_delay_risk(data: AIPredictionInput):
         )
 
     if data.alert_count > 5:
-        recommendations.append(
-            "Multiple safety alerts detected: inspect the construction site."
-        )
+        recommendations.append("Multiple safety alerts detected: inspect the construction site.")
 
     if risk.get("risk_level") == "High":
-        recommendations.append(
-            "Critical risk level: emergency site inspection required."
-        )
+        recommendations.append("Critical risk level: emergency site inspection required.")
     elif risk.get("risk_level") == "Medium":
-        recommendations.append(
-            "Moderate risk detected: monitor site conditions carefully."
-        )
+        recommendations.append("Moderate risk detected: monitor site conditions carefully.")
 
     return {
         "success": True,
@@ -189,6 +177,98 @@ def predict_delay_risk(data: AIPredictionInput):
         },
         "recommendations": recommendations,
         "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.get("/equipment/live")
+def get_live_equipment(
+    project_id: str = Query(...),
+    lat: float = Query(21.5433),
+    lng: float = Query(39.1728),
+):
+    now = time.time()
+
+    crane_move = math.sin(now / 35) * 0.00055
+    excavator_move = math.cos(now / 28) * 0.00065
+    bulldozer_move = math.sin(now / 42) * 0.00045
+    pump_move = math.cos(now / 38) * 0.00050
+
+    return {
+        "project_id": project_id,
+        "site_center": {
+            "latitude": lat,
+            "longitude": lng,
+        },
+        "equipment": [
+            {
+                "equipment_id": "eq-crane-01",
+                "name": "Tower Crane",
+                "type": "Crane",
+                "status": "Working",
+                "latitude": lat + crane_move,
+                "longitude": lng + (crane_move / 2),
+                "speed": 1.2,
+                "fuel_level": 78,
+                "engine_status": "Running",
+                "engine_temperature": 84,
+                "engine_hours": 1240,
+                "fault_code": None,
+                "maintenance_alert": False,
+                "image_url": "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=400",
+                "last_update": datetime.now().isoformat(),
+            },
+            {
+                "equipment_id": "eq-excavator-01",
+                "name": "Excavator",
+                "type": "Heavy Equipment",
+                "status": "Working",
+                "latitude": lat - 0.00035 + excavator_move,
+                "longitude": lng + 0.00045 - (excavator_move / 2),
+                "speed": 2.4,
+                "fuel_level": 64,
+                "engine_status": "Running",
+                "engine_temperature": 91,
+                "engine_hours": 870,
+                "fault_code": None,
+                "maintenance_alert": False,
+                "image_url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=400",
+                "last_update": datetime.now().isoformat(),
+            },
+            {
+                "equipment_id": "eq-bulldozer-01",
+                "name": "Bulldozer",
+                "type": "Heavy Equipment",
+                "status": "Maintenance",
+                "latitude": lat + 0.00050 - bulldozer_move,
+                "longitude": lng - 0.00035 + bulldozer_move,
+                "speed": 0.0,
+                "fuel_level": 38,
+                "engine_status": "Idle",
+                "engine_temperature": 76,
+                "engine_hours": 1510,
+                "fault_code": "MNT-204",
+                "maintenance_alert": True,
+                "image_url": "https://images.unsplash.com/photo-1517089596392-fb9a9033e05b?w=400",
+                "last_update": datetime.now().isoformat(),
+            },
+            {
+                "equipment_id": "eq-pump-01",
+                "name": "Water Pump",
+                "type": "Utility",
+                "status": "Paused",
+                "latitude": lat - 0.00045 + (pump_move / 2),
+                "longitude": lng - 0.00055 + pump_move,
+                "speed": 0.0,
+                "fuel_level": 52,
+                "engine_status": "Stopped",
+                "engine_temperature": 45,
+                "engine_hours": 340,
+                "fault_code": None,
+                "maintenance_alert": False,
+                "image_url": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400",
+                "last_update": datetime.now().isoformat(),
+            },
+        ],
     }
 
 

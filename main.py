@@ -392,8 +392,6 @@ def get_bim_data(project_id: int, db: Session = Depends(get_db)):
         }
     }
 
-# ========== Live Equipment Data ==========
-
 @app.get('/equipment/live')
 def get_live_equipment(
     project_id: str = Query(...),
@@ -501,7 +499,6 @@ def get_live_equipment(
             },
         ],
     }
-
 
 # ========== تشغيل مباشر ==========
 if __name__ == "__main__":
